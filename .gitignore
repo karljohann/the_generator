@@ -1,0 +1,13 @@
+# Mac files
+.DS_STORE
+
+# virtual env
+.env
+.venv
+env/
+venv/
+
+# data folder
+data/
+
+*.log
