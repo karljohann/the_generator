@@ -28,7 +28,8 @@ def output_file(filename, filetype, appendix=""):
 
 
 
-def process_data(df):
+def process_data(data):
+    df = pd.concat(data, axis=0, ignore_index=True)
     train_set, test_set = train_test_split(df, test_size=0.1, random_state=123)
 
     y = train_set['note_int'].copy()
@@ -40,7 +41,7 @@ if __name__ == "__main__":
     files = get_files("csv", DATA_FILES_PATH + "/**") # all files and subfolders
     data = []
 
-    for i, f in enumerate(files):
+    for f in files:
         df = pd.read_csv(f, index_col=0)
         data.append(df)
     
