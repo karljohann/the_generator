@@ -38,11 +38,9 @@ def process_data(df):
 
 if __name__ == "__main__":
     files = get_files("csv", DATA_FILES_PATH + "/**") # all files and subfolders
-    fsize = len(files)
     data = []
 
     for i, f in enumerate(files):
-        print(f"{(i + 1)}/{fsize}: {Path(f).name}")
         df = pd.read_csv(f, index_col=0)
         data.append(df)
     
