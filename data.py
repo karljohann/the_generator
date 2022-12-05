@@ -1,44 +1,85 @@
 import glob
 import os
-from pathlib import Path
 
-import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+
+'''
+# USAGE:
+data = Data("/path/to/csv/") # optional parameter train_test_split=0.2
+X, X_test, y, y_test = data.getTensors()
+'''
+
+class Data:
+    def __init__(self, path=None, train_test_split=0.2):
+        self.path = path
+        self.train_test_split = train_test_split
+        self.X = None
+        self.y = None
+        self.X_test = None
+        self.y_test = None
+        self.df = None
+
+        if path:
+            self.parse_files()
+
+    def parse_files(self):
+        files = glob.glob(os.path.join(self.path, "*.csv"))
+        data = []
+
+        for f in files:
+            df = pd.read_csv(f, index_col=0)
+            data.append(df)
+
+        self.df = pd.concat(data, axis=0, ignore_index=True)
+
+    def getData(self, train_test_split=0.2):
+        if train_test_split != 0.2:
+            self.train_test_split = train_test_split # is this necessary
+
+        mm = MinMaxScaler()
+        ss = StandardScaler()
+
+        X = self.df.drop(columns=[
+            'note_int',
+            'time',
+            'end',
+            'velocity',
+        ])
+        y = self.df.iloc[:, 5:6]
+
+        X_ss = ss.fit_transform(X)
+        y_mm = mm.fit_transform(y)
+
+        split = int(X.shape[0] * (1 - self.train_test_split))
+
+        X_train = X_ss[:split, :]
+        X_test = X_ss[split:-1, :]
+
+        y_train = y_mm[1:split+1, :]
+        y_test = y_mm[split+1:, :]
+
+        self.X = X_train
+        self.y = y_train
+        self.X_test = X_test
+        self.y_test = y_test
+
+        return X_train, y_train, X_test, y_test
 
 
-# TODO: Move STORAGE_PATH to utils.py file
+    def getTensors(self):
+        if self.X is None:
+            self.getData() # otherwise there is no data to work with
 
-DATA_FILES_PATH = "/Users/karljohann/Downloads/the_generator/csv/"
-STORAGE_PATH = "/Users/karljohann/Downloads/the_generator/"
+        X_train_tensors = torch.Tensor(self.X)
+        X_test_tensors = torch.Tensor(self.X_test)
 
+        y_train_tensors = torch.Tensor(self.y)
+        y_test_tensors = torch.Tensor(self.y_test)
 
-def process_data(data):
-    df = pd.concat(data, axis=0, ignore_index=True)
-    train_set, test_set = train_test_split(df, test_size=0.1, random_state=123)
+        # rows, note, features
+        X_train_tensors_final = torch.reshape(X_train_tensors, (X_train_tensors.shape[0], 1, X_train_tensors.shape[1]))
+        X_test_tensors_final = torch.reshape(X_test_tensors, (X_test_tensors.shape[0], 1, X_test_tensors.shape[1]))
 
-    # train_set.info()
-    train_set.summary()
+        return X_train_tensors_final, X_test_tensors_final, y_train_tensors, y_test_tensors
 
-    y = train_set['note_int'].copy()
-    X = train_set.drop(columns=[
-        'note_int',
-        'time',
-        'end',
-        'velocity',
-    ])
-    # X = train_set.drop('note_int', axis=1)
-
-    return X, y
-
-
-
-if __name__ == "__main__":
-    files = glob.glob(os.path.join(DATA_FILES_PATH, "*.csv"))
-    data = []
-
-    for f in files:
-        df = pd.read_csv(f, index_col=0)
-        data.append(df)
-
-    process_data(data)
