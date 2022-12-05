@@ -3,6 +3,7 @@ import os
 
 import pandas as pd
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
+import torch
 
 '''
 # USAGE:
