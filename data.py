@@ -15,10 +15,10 @@ STORAGE_PATH = "/Users/karljohann/Downloads/the_generator/"
 
 def process_data(data):
     df = pd.concat(data, axis=0, ignore_index=True)
-    train_set, test_set = train_test_split(df, test_size=0.1, random_state=123)
+    train_set, test_set = train_test_split(df, test_size=0.1, random_state=123, shuffle=False)
 
     # train_set.info()
-    train_set.summary()
+    # train_set.summary()
 
     y = train_set['note_int'].copy()
     X = train_set.drop(columns=[
