@@ -11,3 +11,5 @@ venv/
 data/
 
 *.log
+
+__pychache__

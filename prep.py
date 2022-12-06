@@ -63,6 +63,9 @@ def processFile(f):
                 last_note = note
 
                 notes.append({
+                    'instrument': instrument.program,
+                    'instrument_name': instrument.name,
+
                     'note': pm.note_number_to_name(note.pitch),
                     'time': round(note.start, 3),
                     'end': round(note.end, 3),
