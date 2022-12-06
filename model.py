@@ -55,8 +55,10 @@ class LSTM_Generator(nn.Module):
                                 num_layers=self.num_layers, 
                                 batch_first=True
                           ) #lstm
+        self.drop1 = nn.Dropout(0.5)                  
         self.dense_layer =  nn.Linear(in_features=self.hidden_size, out_features=128) #fully connected 1
         self.relu = nn.ReLU()
+        self.drop2 = nn.Dropout(p=0.1)
         self.output_layer = nn.Linear(in_features=128, out_features=num_classes) #fully connected last layer
         
     
@@ -64,12 +66,13 @@ class LSTM_Generator(nn.Module):
         # initialize states
         hidden_state, cell_state = prev_state
         # Propagate input through LSTM
-        output, new_state = self.lstm_layer(x, (hidden_state, cell_state)) #lstm with input, hidden, and internal state
-
-        out = output.view(-1, self.hidden_size) #reshaping the data for Dense layer next
-        out = self.relu(out)
+        out, new_state = self.lstm_layer(x, (hidden_state, cell_state)) #lstm with input, hidden, and internal state
+        out = self.drop1(out)
+        # out = out.view(-1, self.hidden_size) #reshaping the data for Dense layer next
+        out = out[:, -1, :]
         out = self.dense_layer(out) #first Dense
         out = self.relu(out) #relu
+        out = self.drop2(out)
         out = self.output_layer(out) #Final Output
 
         return out, new_state    
@@ -79,9 +82,5 @@ class LSTM_Generator(nn.Module):
         num_samples = batch_size
         h0 = torch.zeros(self.num_layers, num_samples, self.hidden_size) #hidden state
         c0 = torch.zeros(self.num_layers, num_samples, self.hidden_size) ##internal cell state
-        # print('h0:')
-        # print(h0)
-        # print('c0:')
-        # print(c0)
 
         return h0, c0
