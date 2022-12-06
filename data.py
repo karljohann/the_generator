@@ -20,8 +20,12 @@ class Data:
         self.X_test = None
         self.y_test = None
         self.df = None
+<<<<<<< HEAD
+        self.num_classes = None
+=======
         self.mm = MinMaxScaler()
         self.ss = StandardScaler()
+>>>>>>> 10c1a4d5ca919b07920b2d494cd8cb16b6d646ef
 
         if path:
             self.parse_files()
@@ -48,6 +52,7 @@ class Data:
             'velocity',
         ])
         y = self.df.iloc[:, 5:6]
+        self.num_classes = y.nunique()
 
         X_ss = self.ss.fit_transform(X)
         y_mm = self.mm.fit_transform(y)
