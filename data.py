@@ -2,6 +2,7 @@ import glob
 import os
 
 import pandas as pd
+import numpy as np
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import torch
 
@@ -51,16 +52,29 @@ class Data:
         y = self.df.iloc[:, 5:6]
         self.num_classes = y.nunique()
 
+        # print('X shape')
+        # print(X.shape)
+        # print('y shape')
+        # print(y.shape)
         X_ss = self.ss.fit_transform(X)
-        y_mm = self.mm.fit_transform(y)
+        # print(type(X_ss))
+        # y_mm = self.mm.fit_transform(y)
+        # print('X_ss shape')
+        # print(X_ss.shape)
+
 
         split = int(X.shape[0] * (1 - self.train_test_split))
+        # print('split')
+        # print(split)
+        # print('y')
+        # print(y)
 
         X_train = X_ss[:split, :]
         X_test = X_ss[split:-1, :]
 
-        y_train = y_mm[1:split+1, :]
-        y_test = y_mm[split+1:, :]
+        y_temp = np.array(y.values)
+        y_train = y_temp[1:split+1]
+        y_test = y_temp[split+1:]
 
         self.X = X_train
         self.y = y_train

@@ -18,17 +18,19 @@ def train():
     data = Data(path = DATA_FILES_PATH)
 
     X_temp, y_temp, _, _ = data.getData()
+    # print('raw data y')
+    # print(y_temp)
 
     num_classes = int(data.num_classes)
     num_features = X_temp.shape[1]
 
     # hyperparameters - batch size - lstm hidden layer size
-    BATCH = 8
-    num_units = 8
+    BATCH = 16
+    num_units = 16
 
     index = np.floor(0.1*X_temp.shape[0])
     index = int(index)
-    print(index)
+    # print(index)
 
     X_train = X_temp[index:, :]
     y_train = y_temp[index:, :]
@@ -44,6 +46,9 @@ def train():
     #reshape to rows and features
     # X_train = torch.reshape(BATCH, (1, X_train.shape[1]))
 
+    print('inserting into tensor')
+    print(y_train)
+
     train_ds = TensorDataset(X_train, y_train)
     val_ds = TensorDataset(X_val, y_val)
 
@@ -56,7 +61,7 @@ def train():
 
     model = LSTM_Generator(num_features=num_features, num_units=num_units, num_classes=num_classes)
     
-    learning_rate = 1e-4
+    learning_rate = 1e-3
     num_epochs = 5
 
     criterion = torch.nn.CrossEntropyLoss()    # cross-entropy for classification
@@ -90,7 +95,19 @@ def train():
 
             optimizer.zero_grad() #caluclate the gradient, manually setting to 0
 
+            # print('X train:')
+            # print(X_train)
+            # print('y train:')
+            # print(y_train)
+
             output, (hidden_state, cell_state) = model.forward(X_train, prev_state=(hidden_state, cell_state))    #.view(-1, X_train.shape[1])) #forward pass
+
+            # print('lstm output:')
+            # print(output)
+            # print('hidden state: ')
+            # print(hidden_state)
+            # print('cell state')
+            # print(cell_state)
             
 
             for index, value in enumerate(output):
