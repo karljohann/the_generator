@@ -1,6 +1,7 @@
 import glob
 import os
 import pandas as pd
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
@@ -26,22 +27,24 @@ def train():
     num_features = X_train.shape[1]
 
     # print(X_train[:5])
+    # hyperparameters - batch size - lstm hidden layer size
+    BATCH = 32
+    num_units = 16
 
     X_train = torch.Tensor(X_train.values)
     y_train = torch.Tensor(y_train.values)
     y_train = y_train.type(torch.LongTensor)
     #reshape to rows and features
-    # X_train = torch.reshape(X_train, (X_train.shape[0], X_train.shape[1]))
+    # X_train = torch.reshape(BATCH, (1, X_train.shape[1]))
     train_ds = TensorDataset(X_train, y_train)
-    BATCH = 32
-    num_units = 16
+    
 
     train_dl = DataLoader(train_ds, batch_size=BATCH, shuffle=False)
 
     model = LSTM_Generator(num_features=num_features, num_units=num_units, num_classes=num_classes)
     
-    learning_rate = 1e-3
-    num_epochs = 10
+    learning_rate = 1e-4
+    num_epochs = 5
 
     criterion = torch.nn.CrossEntropyLoss()    # cross-entropy for classification
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate) 
@@ -55,22 +58,46 @@ def train():
     for epoch in range(num_epochs):
         train_loss = 0
         total_epochs.append(epoch)
+
+        hidden_state, cell_state = model.init_states(BATCH)
+
+        batch_iter = 1
         model.train()
         for train_data in train_dl:
+            print(f'batch iteration: {batch_iter}')
+            batch_iter += 1
             X_train, y_train = train_data
-            # test = X_train.view(-1, X_train.shape[1])
-            # print(X_train.shape)
+            test = X_train.reshape(-1, 1, X_train.shape[1])
+            # print('test')
+            # print(test)
             # print(test.shape)
             # print('----------')
             # print(X_train.view(-1, X_train.shape[1]))
             # print('----------')
-            X_train = torch.reshape(X_train, (X_train.shape[0], 1, X_train.shape[1]))     
-            outputs = model.forward(X_train)    #.view(-1, X_train.shape[1])) #forward pass
+            X_train #= torch.reshape(X_train, (X_train.shape[0], 1, X_train.shape[1]))     
+
+            # print('X train')
+            # print(X_train)
+            # print(X_train.shape)
+            # print('hidden state')
+            # print(hidden_state)
+            # print(hidden_state.shape)
+            # print('cell state')
+            # print(cell_state)
+            # print(cell_state.shape)
+
+            outputs, (hidden_state, cell_state) = model.forward(test, prev_state=(hidden_state, cell_state))    #.view(-1, X_train.shape[1])) #forward pass
             optimizer.zero_grad() #caluclate the gradient, manually setting to 0
+
+            # print('output')
+            # print(torch.argmax(outputs[0]))
+            # print('y train')
+            # print(y_train)
 
             # obtain the loss function
             loss = criterion(outputs, y_train)
-            loss.backward() #calculates the loss of the loss function
+            # perform backpropagation
+            loss.backward(retain_graph=True) #calculates the loss of the loss function
  
             optimizer.step() #improve from loss, i.e backprop
             train_loss += loss.item()
