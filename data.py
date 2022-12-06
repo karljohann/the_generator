@@ -20,6 +20,8 @@ class Data:
         self.X_test = None
         self.y_test = None
         self.df = None
+        self.mm = MinMaxScaler()
+        self.ss = StandardScaler()
 
         if path:
             self.parse_files()
@@ -33,13 +35,11 @@ class Data:
             data.append(df)
 
         self.df = pd.concat(data, axis=0, ignore_index=True)
+        # self.df = pd.concat(data[:100], axis=0, ignore_index=True)
 
     def getData(self, train_test_split=0.2):
         if train_test_split != 0.2:
             self.train_test_split = train_test_split # is this necessary
-
-        mm = MinMaxScaler()
-        ss = StandardScaler()
 
         X = self.df.drop(columns=[
             'note_int',
@@ -48,9 +48,10 @@ class Data:
             'velocity',
         ])
         y = self.df.iloc[:, 5:6]
+        print("y", y[:40])
 
-        X_ss = ss.fit_transform(X)
-        y_mm = mm.fit_transform(y)
+        X_ss = self.ss.fit_transform(X)
+        y_mm = self.mm.fit_transform(y)
 
         split = int(X.shape[0] * (1 - self.train_test_split))
 
@@ -84,3 +85,5 @@ class Data:
 
         return X_train_tensors_final, X_test_tensors_final, y_train_tensors, y_test_tensors
 
+    def inverseTransform(self, y_pred, y):
+        return self.mm.inverse_transform(y_pred), self.mm.inverse_transform(y)
