@@ -20,6 +20,7 @@ class Data:
         self.X_test = None
         self.y_test = None
         self.df = None
+        self.num_classes = None
 
         if path:
             self.parse_files()
@@ -48,6 +49,7 @@ class Data:
             'velocity',
         ])
         y = self.df.iloc[:, 5:6]
+        self.num_classes = y.nunique()
 
         X_ss = ss.fit_transform(X)
         y_mm = mm.fit_transform(y)
