@@ -48,7 +48,6 @@ class Data:
             'velocity',
         ])
         y = self.df.iloc[:, 5:6]
-        print("y", y[:40])
 
         X_ss = self.ss.fit_transform(X)
         y_mm = self.mm.fit_transform(y)
