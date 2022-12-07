@@ -1,5 +1,6 @@
 import glob
 import os
+import pickle
 
 import pandas as pd
 import numpy as np
@@ -13,7 +14,7 @@ X, X_test, y, y_test = data.getTensors()
 '''
 
 class Data:
-    def __init__(self, path=None, train_test_split=0.2):
+    def __init__(self, path=None, train_test_split=0.2, isPkl=False, pklPath=None):
         self.path = path
         self.train_test_split = train_test_split
         self.X = None
@@ -24,20 +25,29 @@ class Data:
         self.num_classes = None
         self.mm = MinMaxScaler()
         self.ss = StandardScaler()
+        self.isPkl = isPkl
+        self.pklPath = pklPath
 
         if path:
-            self.parse_files()
+            self.parseFiles()
 
-    def parse_files(self):
-        files = glob.glob(os.path.join(self.path, "*.csv"))
-        data = []
+    def parseFiles(self):
+        if self.isPkl:
+            self.df = pd.read_pickle(self.path)
+        else:
+            files = glob.glob(os.path.join(self.path, "*.csv"))
+            data = []
 
-        for f in files:
-            df = pd.read_csv(f, index_col=0)
-            data.append(df)
+            for f in files:
+                df = pd.read_csv(f)
+                data.append(df)
 
-        self.df = pd.concat(data, axis=0, ignore_index=True)
-        # self.df = pd.concat(data[:100], axis=0, ignore_index=True)
+            self.df = pd.concat(data, axis=0, ignore_index=True)
+
+            if self.pklPath is not None:
+                f = open(self.pklPath, 'wb')
+                pickle.dump(self.df, f)
+                f. close()
 
     def getData(self, train_test_split=0.2):
         if train_test_split != 0.2:
