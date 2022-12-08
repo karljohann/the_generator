@@ -7,8 +7,8 @@ import numpy as np
 import pretty_midi as pm
 
 
-INPUT_FILES_PATH = "/Users/karljohann/Downloads/archive/Jazz Midi"
-STORAGE_PATH = "/Users/karljohann/Downloads/the_generator/csv/"
+INPUT_FILES_PATH = "/Users/karljohann/Downloads/the_generator/bach/musicnet_midis/musicnet_midis/Bach/"
+STORAGE_PATH = "/Users/karljohann/dev/HR/the_generator/data/csv/bach/"
 
 
 def get_files(dir = None):
@@ -44,13 +44,15 @@ def processFile(f):
 
     # time (ms) since last note
     def getTimedelta(note, last_timedelta, last_note):
-        if last_note.start == note.start: # same start time as last: chord (or first note)
-            return last_timedelta
+        if last_note.start == note.start: # same start time as last: chord (or first note) # FIXME: Set chord as 0.0, otherwise it's predicting next note in chord
+            return 0.0 # FIXME: Doesn't this happen anyway if last_note == note?
+            # return last_timedelta
 
-        return np.clip((note.start - last_note.start), 0.0, 999)
+        return np.clip((note.start - last_note.start), 0.0, 999.9)
 
     for i, instrument in enumerate(mid.instruments): # TODO: remove enumeration (only used for filename)
         notes = None
+        # if not instrument.is_drum and instrument.program in list(range(32, 40)): # skip instruments that are not melodic
         if not instrument.is_drum: # skip instruments that are not melodic
             last_note = instrument.notes[0]
             timedelta = 0
@@ -59,8 +61,8 @@ def processFile(f):
             instr_notes = instrument.notes
             instr_notes = sorted(instr_notes, key=lambda k: k.start)
             for note in instr_notes:
-                timedelta = getTimedelta(note, timedelta, last_note)
-                last_note = note
+                # timedelta = getTimedelta(note, timedelta, last_note)
+                timedelta = np.clip((note.start - last_note.start), 0.0, 99.9)
 
                 notes.append({
                     'instrument': instrument.program,
