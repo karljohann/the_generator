@@ -41,7 +41,7 @@ class Data:
         self.isSequence = isSequence
 
         if csvPath:
-          self.df = pd.read_csv(self.path)
+          self.df = pd.read_csv(csvPath)
         elif path:
             self.parseFiles()
 
@@ -70,7 +70,7 @@ class Data:
         if train_test_split != self.train_test_split:
             self.train_test_split = train_test_split
         
-        self.df = self.df[:100]                                                 #FIXME TODO REMOVE DELETE
+        # self.df = self.df[:2000]                                                 #FIXME TODO REMOVE DELETE
 
         X = self.df.drop(columns=[
             # 'note_int',
@@ -111,7 +111,7 @@ class Data:
         y_train, y2_train, y3_train = get_y('train')
         y_test, y2_test, y3_test = get_y('test')
 
-        # self.num_classes = y.nunique()
+        # self.num_classes = (self.df.loc[:, 'note_int'].nunique() + 10)
         self.num_classes = 128
 
         self.X = X_train
