@@ -1,199 +1,193 @@
-import glob
-import os
-import pandas as pd
-import numpy as np
+from datetime import datetime
 import torch
-import torch.nn as nn
-from torch.utils.data import Dataset
 from torch.utils.data import DataLoader, TensorDataset 
+
 import matplotlib.pyplot as plt
 
-from model import LSTM_Generator
+from model import GRU_Generator
 from data import Data
 
-DATA_FILES_PATH = "CSV/"
+DATA_FILES_PATH = ""
+STORAGE_PATH = ""
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def train():
-    
-    data = Data(path = DATA_FILES_PATH)
+    data = Data(csvPath=DATA_FILES_PATH)
+    X_train, (y_seq, y2_seq, y3_seq), X_val, (y_val, y2_val, y3_val) = data.getData()
+    # X_seq, y_seq, y2_seq, y3_seq = data.getSequence(seq_len=4)
+    X_seq = X_train
 
-    X_temp, y_temp, _, _ = data.getData()
-    # print('raw data y')
-    # print(y_temp)
-
-    num_classes = int(data.num_classes)
-    num_features = X_temp.shape[1]
 
     # hyperparameters - batch size - lstm hidden layer size
     BATCH = 16
-    num_units = 16
+    num_classes = data.num_classes # num of outputs
+    num_features = X_seq.shape[1] # input size (features)
+    num_units = 8 # hidden units
 
-    index = np.floor(0.1*X_temp.shape[0])
-    index = int(index)
-    # print(index)
-
-    X_train = X_temp[index:, :]
-    y_train = y_temp[index:, :]
-    X_val = X_temp[:index, :]
-    y_val = y_temp[:index, :]
-
-    X_train = torch.Tensor(X_train)
-    y_train = torch.Tensor(y_train)
-    y_train = y_train.type(torch.LongTensor)
-    X_val = torch.Tensor(X_val)
-    y_val = torch.Tensor(y_val)
-    y_val = y_val.type(torch.LongTensor)
-    #reshape to rows and features
-    # X_train = torch.reshape(BATCH, (1, X_train.shape[1]))
-
-    print('inserting into tensor')
-    print(y_train)
-
-    train_ds = TensorDataset(X_train, y_train)
-    val_ds = TensorDataset(X_val, y_val)
-
+    train_ds = TensorDataset(X_seq, y_seq, y2_seq, y3_seq)
+    test_ds = TensorDataset(X_val, y_val, y2_val, y3_val)
     train_dl = DataLoader(train_ds, batch_size=BATCH, shuffle=False, drop_last=True)
-    val_dl = DataLoader(val_ds, batch_size=BATCH, shuffle=False, drop_last=True)
+    test_dl = DataLoader(test_ds, batch_size=BATCH, shuffle=False, drop_last=True)
 
     print(f'num_features: {num_features}')
     print(f'num_units: {num_units}')
     print(f'num_classes: {num_classes}')
 
-    model = LSTM_Generator(num_features=num_features, num_units=num_units, num_classes=num_classes)
+    model = GRU_Generator(num_features=num_features, num_units=num_units, num_classes=num_classes)
     
-    learning_rate = 1e-3
-    num_epochs = 5
+    num_epochs = 440
 
-    criterion = torch.nn.CrossEntropyLoss()    # cross-entropy for classification
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate) 
+    # learning_rate = 1e-3
+    learning_rate = 0.002
+    # lambda1 = lambda epoch: epoch // 30
+    # lambda2 = lambda epoch: 0.95 ** epoch
 
+    criterion = torch.nn.CrossEntropyLoss()
+    criterion2 = torch.nn.MSELoss()
+    criterion3 = torch.nn.MSELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+    # scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda2)
+
+    note_train_acc = []
+    note_test_acc = []
     total_train_loss = []
+    total_train2_loss = []
+    total_train3_loss = []
     total_val_loss = []
     total_epochs = []
-    print('----------')
-    print('Starting to train!')
-    print('----------')
+    print("----------", "\nStarting to train", "\n----------")
+
+    def getLoss(_output, y, _criterion, train=True):
+        correct = 0
+        train_total = 0
+
+        for index, value in enumerate(_output):
+            if torch.argmax(value).item() == y[index].item():
+                correct += 1
+            train_total += 1
+
+        loss = _criterion(_output, y)
+
+        if train:
+            loss.backward(retain_graph=True) #calculates the loss of the loss function
+    
+        return loss.item(), train_total, correct
 
     for epoch in range(num_epochs):
         
         total_epochs.append(epoch)
-        print(f'epoch: {epoch+1}')
 
-        hidden_state, cell_state = model.init_states(BATCH)
+        hidden_state = model.init_states(BATCH)
 
         train_loss = 0
+        train2_loss = 0
+        train3_loss = 0
         train_correct = 0
         train_total = 0
 
         batch_iter = 1
         model.train()
+
         for train_data in train_dl:
             batch_iter += 1
-            X_train, y_train = train_data
-            X_train = X_train.reshape(-1, 1, X_train.shape[1])
-            y_train = torch.squeeze(y_train)
+            X_train, y_seq, y2_seq, y3_seq = train_data
+            X_sq = X_train.reshape(-1, 1, X_train.shape[1])
 
-            optimizer.zero_grad() #caluclate the gradient, manually setting to 0
+            optimizer.zero_grad()
 
-            # print('X train:')
-            # print(X_train)
-            # print('y train:')
-            # print(y_train)
+            output1, output2, output3, hidden_state = model.forward(X_sq, hidden_state=hidden_state)
 
-            output, (hidden_state, cell_state) = model.forward(X_train, prev_state=(hidden_state, cell_state))    #.view(-1, X_train.shape[1])) #forward pass
+            loss_value, _train_total, _train_correct = getLoss(output1, y_seq, criterion)
+            loss2_value, _, _ = getLoss(output2, y2_seq, criterion2)
+            loss3_value, _, _ = getLoss(output3, y3_seq, criterion3)
 
-            # print('lstm output:')
-            # print(output)
-            # print('hidden state: ')
-            # print(hidden_state)
-            # print('cell state')
-            # print(cell_state)
-            
-
-            for index, value in enumerate(output):
-                if torch.argmax(value) == y_train[index]:
-                    train_correct += 1
-                train_total += 1
-
-            # obtain the loss function
-            loss = criterion(output, y_train)
-            loss_value = loss.item()
+            train_total += _train_total
+            train_correct += _train_correct
             train_loss += loss_value
-            # perform backpropagation
-            loss.backward(retain_graph=True) #calculates the loss of the loss function
-            # print(hidden_state.shape)
-            hidden_state, cell_state = hidden_state.detach(), cell_state.detach()
- 
-            optimizer.step() #improve from loss, i.e backprop
-            
-            if batch_iter % 1000 == 0:
-                print('Epoch: {}/{}'.format(epoch+1, num_epochs),
-                          'Iteration: {}'.format(batch_iter),
-                          'Training Loss: {}'.format(loss_value),
-                          'Training Accuracy: {}'.format(round(train_correct/train_total, 3)))
-        
+            train2_loss += loss2_value
+            train3_loss += loss3_value
 
-        print('\n Validating! \n')
-        hidden_state, cell_state = model.init_states(BATCH)
+            # grad clipping
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0, error_if_nonfinite=True)
+            hidden_state = hidden_state.detach()
+            optimizer.step()
+
+        # scheduler.step()
+
+
+        # save loss and accuracy for this epoch
+        note_train_acc.append(train_correct/train_total)
+        total_train_loss.append(train_loss/len(train_dl))
+        total_train2_loss.append(train2_loss/len(train_dl))
+        total_train3_loss.append(train3_loss/len(train_dl))
+
+        print(f"Epoch: {epoch+1}/{num_epochs}",
+            f"Loss: |{round(train_loss, 3)}| (note), |{round(train2_loss, 3)}| (timedelta), |{round(train3_loss, 3)}| (note_length)\t",
+            f"Acc: {round(train_correct/train_total, 3)} (note)"
+        )
+
+
+        ## VALIDATION
+        hidden_state = model.init_states(BATCH)
 
         val_loss = 0
+        val2_loss = 0
+        val3_loss = 0
         val_correct = 0
         val_total = 0
 
         batch_iter = 1
         model.eval()
         with torch.no_grad(): 
-            for train_data in train_dl:
+            for test_data in test_dl:
                 batch_iter += 1
-                X_val, y_val = train_data
+                X_val, y_val, y2_val, y3_val = test_data
                 X_val = X_val.reshape(-1, 1, X_val.shape[1])
                 y_val = torch.squeeze(y_val)
 
-                output, (hidden_state, cell_state) = model.forward(X_val, prev_state=(hidden_state, cell_state))    #.view(-1, X_train.shape[1])) #forward pass
+                output1, output2, output3, hidden_state = model.forward(X_val, hidden_state=hidden_state)
 
-                for index, value in enumerate(output):
-                    if torch.argmax(value) == y_val[index]:
-                        val_correct += 1
-                    val_total += 1
+                loss_value, _test_total, _test_correct = getLoss(output1, y_val, criterion, False)
+                loss_value2, _, _ = getLoss(output2, y2_val, criterion2, False)
+                loss_value3, _, _ = getLoss(output3, y3_val, criterion3, False)
 
-                # obtain the loss function
-                loss = criterion(output, y_val)
-                loss_value = loss.item()
+                val_correct += _test_correct
+                val_total += _test_total
+
                 val_loss += loss_value
-    
-                if batch_iter % 1000 == 0:
-                    print('Epoch: {}/{}'.format(epoch+1, num_epochs),
-                            'Iteration: {}'.format(batch_iter),
-                            'Validation Loss: {}'.format(loss_value),
-                            'Validation Accuracy: {}'.format(round(train_correct/train_total, 3)))              
-            # if epoch % 100 == 0:
-        # save loss and accuracy for this epoch
-        total_train_loss.append(train_loss/len(train_dl))
-        print("Epoch: %d, training loss: %1.5f" % (epoch+1, train_loss/len(train_dl))) 
-        print(f'training acc: {round(train_correct/train_total, 3)}')
-        total_val_loss.append(val_loss/len(val_dl))
-        print("Epoch: %d, validation loss: %1.5f" % (epoch+1, val_loss/len(val_dl))) 
-        print(f'validation acc: {round(val_correct/val_total, 3)}')
+                val2_loss += loss_value2
+                val3_loss += loss_value3
 
-    plt.plot(total_epochs, total_train_loss)
-    plt.plot(total_epochs, total_val_loss)
+        # print(f"Epoch: {epoch+1}/{num_epochs}",
+        #     f"Val Loss: |{round(val_loss, 3)}| (note), |{round(val2_loss, 3)}| (timedelta), |{round(val3_loss, 3)}| (note_length)\t",
+        #     f"Val Acc: {round(val_correct/val_total, 3)} (note)"
+        # )
+
+        note_test_acc.append(val_correct/val_total)
+        total_val_loss.append(val_loss/len(test_dl))
+
+
+    ## SAVE MODEL
+    torch.save(model.state_dict(), STORAGE_PATH + f"the_generator_{datetime.timestamp(datetime.now())}.pk")
+
+    ## PLOT SHIT UP
+    fig, axs = plt.subplots(4, sharex=True, sharey=False)
+    axs[0].set_title('Note training accuracy')
+    axs[0].plot(total_epochs, note_train_acc)
+    axs[0].plot(total_epochs, note_test_acc)
+    axs[1].set_title('Note training loss')
+    axs[1].plot(total_epochs, total_train_loss)
+    axs[1].plot(total_epochs, total_val_loss)
+    axs[2].set_title('Timedelta training loss')
+    axs[2].plot(total_epochs, total_train2_loss)
+    axs[3].set_title('Note length training loss')
+    axs[3].plot(total_epochs, total_train3_loss)
+    # plt.plot(total_epochs, total_val_loss)
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
-    plt.title('Training  and validationLoss')
+    
     plt.show()
 
-
-# class timeseries_dataset(Dataset):
-#    def __init__(self,X,y):
-#        self.x = torch.tensor(X,dtype=torch.float32)
-#        self.y = torch.tensor(y,dtype=torch.float32)
-#        self.len = X.shape[0]
-#
-#    def __getitem__(self,idx):
-#        return self.X[idx],self.y[idx]
-#  
-#    def __len__(self):
-#        return self.len        
 
 if __name__ == "__main__":
     train()    
