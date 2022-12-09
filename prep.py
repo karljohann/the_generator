@@ -62,7 +62,10 @@ def processFile(f):
             instr_notes = sorted(instr_notes, key=lambda k: k.start)
             for note in instr_notes:
                 # timedelta = getTimedelta(note, timedelta, last_note)
-                timedelta = np.clip((note.start - last_note.start), 0.0, 99.9)
+                # timedelta = np.clip((note.start - last_note.start), 0.0, 99.9)
+                timedelta = (note.start - last_note.start)
+                last_note = note
+
 
                 notes.append({
                     'instrument': instrument.program,
