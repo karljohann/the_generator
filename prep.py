@@ -7,8 +7,8 @@ import numpy as np
 import pretty_midi as pm
 
 
-INPUT_FILES_PATH = "/Users/karljohann/Downloads/the_generator/bach/musicnet_midis/musicnet_midis/Bach/"
-STORAGE_PATH = "/Users/karljohann/dev/HR/the_generator/data/csv/bach/"
+INPUT_FILES_PATH = ""
+STORAGE_PATH = ""
 
 
 def get_files(dir = None):

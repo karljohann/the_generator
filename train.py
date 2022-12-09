@@ -1,5 +1,4 @@
 from datetime import datetime
-import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset 
 
@@ -8,14 +7,12 @@ import matplotlib.pyplot as plt
 from model import GRU_Generator
 from data import Data
 
-# DATA_FILES_PATH = "/Users/karljohann/dev/HR/the_generator/data/csv/bach/"
-DATA_FILES_PATH = "/Users/karljohann/Downloads/the_generator/bach.csv"
-STORAGE_PATH = "/Users/karljohann/Downloads/the_generator/"
+DATA_FILES_PATH = ""
+STORAGE_PATH = ""
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def train():
     data = Data(csvPath=DATA_FILES_PATH)
-    # data = Data(path=DATA_FILES_PATH + "small_sax.pkl", isPkl=True)
     X_train, (y_seq, y2_seq, y3_seq), X_val, (y_val, y2_val, y3_val) = data.getData()
     # X_seq, y_seq, y2_seq, y3_seq = data.getSequence(seq_len=4)
     X_seq = X_train
@@ -65,22 +62,8 @@ def train():
         train_total = 0
 
         for index, value in enumerate(_output):
-            # print(torch.argmax(value).item(), y_sq.item())
-            # return
-            # print(">>>", torch.argmax(value), torch.argmax(y_sq[index]))
-            # if index % 100000 == 0:
-            #     print(">>> value, y_sq", torch.argmax(value), y[index])
-            # if torch.argmax(value) == torch.argmax(y_sq[index]):
             if torch.argmax(value).item() == y[index].item():
                 correct += 1
-
-            # if show:
-            #     print(
-            #         torch.argmax(value).item(),
-            #         "=",
-            #         y[index].item(),
-            #         end=", "
-            #     )
             train_total += 1
 
         loss = _criterion(_output, y)
@@ -111,9 +94,6 @@ def train():
             X_sq = X_train.reshape(-1, 1, X_train.shape[1])
 
             optimizer.zero_grad()
-
-            if (epoch + 1) == num_epochs:
-                print(X_sq)
 
             output1, output2, output3, hidden_state = model.forward(X_sq, hidden_state=hidden_state)
 
@@ -148,8 +128,6 @@ def train():
 
 
         ## VALIDATION
-        # if (epoch + 1) == num_epochs:
-        # print('\n Validating! \n')
         hidden_state = model.init_states(BATCH)
 
         val_loss = 0
@@ -187,9 +165,6 @@ def train():
 
         note_test_acc.append(val_correct/val_total)
         total_val_loss.append(val_loss/len(test_dl))
-        # if epoch % 100 == 0:
-        # print(f"Validation loss: {val_loss/len(test_dl)}, {val2_loss/len(test_dl)}, {val3_loss/len(test_dl)}") 
-        # print(f'validation acc: {round(val_correct/val_total, 3)}')
 
 
     ## SAVE MODEL

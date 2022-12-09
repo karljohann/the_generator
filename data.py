@@ -4,7 +4,7 @@ import pickle
 
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+# from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import torch
 
 '''
@@ -33,8 +33,6 @@ class Data:
         self.y_test = None
         self.df = None
         self.num_classes = None
-        self.mm = MinMaxScaler()
-        self.ss = StandardScaler()
         self.isPkl = isPkl
         self.pklPath = pklPath
         self.save_to_csv = save_to_csv
@@ -59,7 +57,7 @@ class Data:
             self.df = pd.concat(data, axis=0, ignore_index=True)
 
             if self.save_to_csv:
-                self.df.to_csv('/Users/karljohann/Downloads/the_generator/bach.csv', index=False)
+                self.df.to_csv("", index=False)
 
             if self.pklPath is not None:
                 f = open(self.pklPath, 'wb')
@@ -69,8 +67,6 @@ class Data:
     def getData(self, train_test_split=0.2):
         if train_test_split != self.train_test_split:
             self.train_test_split = train_test_split
-        
-        # self.df = self.df[:2000]                                                 #FIXME TODO REMOVE DELETE
 
         X = self.df.drop(columns=[
             # 'note_int',
@@ -87,7 +83,6 @@ class Data:
             'note_length_tick',
         ])
 
-        # X_ss = self.ss.fit_transform(X)
         X_ss = X.values
 
         split = int(X.shape[0] * (1 - self.train_test_split))

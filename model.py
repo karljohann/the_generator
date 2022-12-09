@@ -10,7 +10,6 @@ class GRU_Generator(nn.Module):
         self.num_layers = num_layers #number of GRU layers
         self.input_size = num_features #input size (features)
         self.hidden_size = num_units #hidden units
-        # self.seq_length = seq_length #sequence length
 
         self.gru_layer = nn.GRU(
                                 input_size=self.input_size, 
@@ -33,7 +32,6 @@ class GRU_Generator(nn.Module):
     def forward(self,x, hidden_state):
         # Propagate input through GRU
         out, new_state = self.gru_layer(x, hidden_state) #lstm with input, hidden, and internal state
-        # out = out.view(-1, self.hidden_size) #reshaping the data for Dense layer next
         out = out[:, -1, :]
         out1 = self.dense_layer1(out) #first Dense
         out2 = self.dense_layer2(out) #first Dense
